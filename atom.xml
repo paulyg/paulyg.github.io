@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Paul Garvin's Dev Blog]]></title>
+  <link href="/atom.xml" rel="self"/>
+  <link href="/"/>
+  <updated>2014-01-26T22:55:59-05:00</updated>
+  <id>/</id>
+  <author>
+    <name><![CDATA[Paul Garvin]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[New Beginnings]]></title>
+    <link href="/blog/2014/01/25/new-beginnings.html"/>
+    <updated>2014-01-25T00:00:00-05:00</updated>
+    <id>/blog/2014/01/25/new-beginnings</id>
+    <content type="html"><![CDATA[<p>I am taking a cue from respected PHP developer <a href="http://paul-m-jones.com/">Paul M. Jones</a>. Paul somewhat recently split his blog into two. One for personal stuff (he blogs about a lot of political stuff) and one for software development. In starting this blog I am doing something similar.</p>
+
+<p>I have not been very active on my personal blog for a while. And part of that is becuase I have been reluctant to make a bunch of technical posts there. My family  and some friends follow it and I think they would think it&#39;s weird that I am posting about all this PHP stuff when that is not my day job. But since I can&#39;t talk much about my day job (they are very much an old school, closed, engineering shop) and I have not been doing autocrossing or track days since becoming a homeowner and then dad, writing web apps is the most exiting thing going.</p>
+
+<p>The other factor is I have been iching to convert my WordPress blog to <a href="http://jekyllrb.com">Jekyll</a>/<a href="http://octopress.org/">Octopress</a>. Through the generousty of Github I have a free space to host this blog and can play around with Jekyll and Octopress. I think my personal blog being on WordPress hurt my willingness to write as well. The software just felt so <em>heavy</em>. I should have made more use of the Android app though. Oh well.</p>
+
+<p>I amd looking forward to putting out some great content, mostly on PHP but also some CSS and Linux stuff.</p>
+
+<p>Till next time...</p>
+
+<p>Paul</p>
+]]></content>
+  </entry>
+  
+</feed>
