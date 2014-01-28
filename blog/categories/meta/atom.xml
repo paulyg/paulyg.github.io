@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: Meta | Paul Garvin's Dev Blog]]></title>
-  <link href="/blog/categories/meta/atom.xml" rel="self"/>
-  <link href="/"/>
-  <updated>2014-01-26T23:06:31-05:00</updated>
-  <id>/</id>
+  <title><![CDATA[Category: Meta - Paul Garvin's Dev Blog]]></title>
+  <link href="http://paulyg.github.io/blog/categories/meta/atom.xml" rel="self"/>
+  <link href="http://paulyg.github.io"/>
+  <updated>2014-01-27T21:40:11-05:00</updated>
+  <id>http://paulyg.github.io</id>
   <author>
     <name><![CDATA[Paul Garvin]]></name>
     
   </author>
-  <generator uri="http://octopress.org/">Octopress</generator>
+  <generator uri="http://jekyllrb.com/">Jekyll</generator>
 
   
   <entry>
     <title type="html"><![CDATA[New Beginnings]]></title>
-    <link href="/blog/2014/01/25/new-beginnings.html"/>
+    <link href="http://paulyg.github.io/blog/2014/01/25/new-beginnings.html"/>
     <updated>2014-01-25T00:00:00-05:00</updated>
-    <id>/blog/2014/01/25/new-beginnings</id>
+    <id>http://paulyg.github.io/blog/2014/01/25/new-beginnings</id>
     <content type="html"><![CDATA[<p>I am taking a cue from respected PHP developer <a href="http://paul-m-jones.com/">Paul M. Jones</a>. Paul somewhat recently split his blog into two. One for personal stuff (he blogs about a lot of political stuff) and one for software development. In starting this blog I am doing something similar.</p>
 
 <p>I have not been very active on my personal blog for a while. And part of that is becuase I have been reluctant to make a bunch of technical posts there. My family  and some friends follow it and I think they would think it&#39;s weird that I am posting about all this PHP stuff when that is not my day job. But since I can&#39;t talk much about my day job (they are very much an old school, closed, engineering shop) and I have not been doing autocrossing or track days since becoming a homeowner and then dad, writing web apps is the most exiting thing going.</p>
