@@ -2,15 +2,19 @@
 <urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
     <url>
         <loc>/blog/2014/01/25/new-beginnings.html</loc>
-        <lastmod>2014-01-26T22:50:11-05:00</lastmod>
+        <lastmod>2014-02-01T14:38:40-05:00</lastmod>
+    </url>
+    <url>
+        <loc>/blog/2014/02/01/using-phps-recursivefilteriterator.html</loc>
+        <lastmod>2014-02-01T14:58:04-05:00</lastmod>
     </url>
     <url>
         <loc>/</loc>
-        <lastmod>2014-01-26T22:50:11-05:00</lastmod>
+        <lastmod>2014-02-01T14:58:04-05:00</lastmod>
     </url>
     <url>
         <loc>/blog/archives/blog/archives/</loc>
-        <lastmod>2014-01-26T22:50:11-05:00</lastmod>
+        <lastmod>2014-02-01T14:58:04-05:00</lastmod>
     </url>
     <url>
         <loc>/projects.html</loc>

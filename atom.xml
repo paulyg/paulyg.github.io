@@ -4,7 +4,7 @@
   <title><![CDATA[Paul Garvin's Dev Blog]]></title>
   <link href="http://paulyg.github.io/atom.xml" rel="self"/>
   <link href="http://paulyg.github.io"/>
-  <updated>2014-01-27T21:40:11-05:00</updated>
+  <updated>2014-02-01T14:58:05-05:00</updated>
   <id>http://paulyg.github.io</id>
   <author>
     <name><![CDATA[Paul Garvin]]></name>
@@ -14,17 +14,111 @@
 
   
   <entry>
+    <title type="html"><![CDATA[Using PHP's RecursiveFilterIterator]]></title>
+    <link href="http://paulyg.github.io/blog/2014/02/01/using-phps-recursivefilteriterator.html"/>
+    <updated>2014-02-01T04:45:39Z</updated>
+    <id>http://paulyg.github.io/blog/2014/02/01/using-phps-recursivefilteriterator</id>
+    <content type="html"><![CDATA[<p>I was recently working on a project where I needed to recursively get all of the files with a particular extension inside a directory. Actually I needed to find all files with a <code>.php</code> extension but not <code>.html.php</code>. Sounds like a perfect use for <code>RecursiveDirectoryIterator</code> right? I could do something like the following.</p>
+
+<div class="highlight"><pre><code class="php"><span class="cp">&lt;?php</span>
+<span class="nv">$files</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">RecursiveIteratorIterator</span><span class="p">(</span><span class="k">new</span> <span class="nx">RecursiveDirectoryIterator</span><span class="p">(</span><span class="nv">$dir</span><span class="p">));</span>
+<span class="k">foreach</span> <span class="p">(</span><span class="nv">$files</span> <span class="k">as</span> <span class="nv">$path</span> <span class="o">=&gt;</span> <span class="nv">$finfo</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">substr</span><span class="p">(</span><span class="nv">$path</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span><span class="p">)</span> <span class="o">!=</span> <span class="s1">&#39;.php&#39;</span> <span class="o">||</span> <span class="nx">substr</span><span class="p">(</span><span class="nv">$path</span><span class="p">,</span> <span class="o">-</span><span class="mi">9</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;.html.php&#39;</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">continue</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="c1">// do stuff</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>But I figured I would give <code>RecursiveFilterIterator</code> a try. For those who don&#39;t know all of the classes mentioned are part of PHP&#39;s SPL extension. <code>RecursiveFilterIterator</code> is actually an abstract class, you have to extend it and implement the <code>accept</code> method. From that method you return a boolean where false is skip the items and true is pass it to the iteration loop.</p>
+
+<div class="highlight"><pre><code class="php"><span class="cp">&lt;?php</span>
+<span class="k">class</span> <span class="nc">PHPFileIterator</span> <span class="k">extends</span> <span class="nx">RecursiveFilterIterator</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">accept</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="nv">$file</span> <span class="o">=</span> <span class="k">parent</span><span class="o">::</span><span class="na">current</span><span class="p">();</span>
+        <span class="nv">$name</span> <span class="o">=</span> <span class="nv">$file</span><span class="o">-&gt;</span><span class="na">getFilename</span><span class="p">();</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nx">substr</span><span class="p">(</span><span class="nv">$name</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;.php&#39;</span> <span class="o">&amp;&amp;</span> <span class="nx">substr</span><span class="p">(</span><span class="nv">$name</span><span class="p">,</span> <span class="o">-</span><span class="mi">9</span><span class="p">)</span> <span class="o">!=</span> <span class="s1">&#39;.html.php&#39;</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="nv">$files</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">PHPFileIterator</span><span class="p">(</span><span class="k">new</span> <span class="nx">RecursiveDirectoryIterator</span><span class="p">(</span><span class="nv">$dir</span><span class="p">));</span>
+</code></pre></div>
+
+<p>I thought that because <code>RecursiveFilterIterator</code> implements <code>OuterIterator</code> I could just pass it to a <code>foreach</code> statement. However running this produced no results. Upon further inspection it the loop was hitting the first sub-directory and stopping there. Reading the user comments on the documentation page for <code>RecursiveFilterIterator</code> shows that you still need to wrap <code>RecursiveFilterIterator</code> in a <code>RecursiveIteratorIterator</code>. Sigh, OK.</p>
+
+<div class="highlight"><pre><code class="php"><span class="cp">&lt;?php</span>
+<span class="nv">$files</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">RecursiveIteratorIterator</span><span class="p">(</span><span class="k">new</span> <span class="nx">PHPFileIterator</span><span class="p">(</span><span class="k">new</span> <span class="nx">RecursiveDirectoryIterator</span><span class="p">(</span><span class="nv">$dir</span><span class="p">)));</span>
+</code></pre></div>
+
+<p>But still this did not work. It turns out it was not iterating down into the sub-directories. In the <code>accept</code> method I also had to return true when a directory was encountered.</p>
+
+<div class="highlight"><pre><code class="php"><span class="cp">&lt;?php</span>
+<span class="k">class</span> <span class="nc">PHPFileIterator</span> <span class="k">extends</span> <span class="nx">RecursiveFilterIterator</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">accept</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="nv">$file</span> <span class="o">=</span> <span class="k">parent</span><span class="o">::</span><span class="na">current</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nv">$file</span><span class="o">-&gt;</span><span class="na">isDir</span><span class="p">())</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="k">true</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="nv">$name</span> <span class="o">=</span> <span class="nv">$file</span><span class="o">-&gt;</span><span class="na">getFilename</span><span class="p">();</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nx">substr</span><span class="p">(</span><span class="nv">$name</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;.php&#39;</span> <span class="o">&amp;&amp;</span> <span class="nx">substr</span><span class="p">(</span><span class="nv">$name</span><span class="p">,</span> <span class="o">-</span><span class="mi">9</span><span class="p">)</span> <span class="o">!=</span> <span class="s1">&#39;.html.php&#39;</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="nv">$files</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">RecursiveIteratorIterator</span><span class="p">(</span><span class="k">new</span> <span class="nx">PHPFileIterator</span><span class="p">(</span><span class="k">new</span> <span class="nx">RecursiveDirectoryIterator</span><span class="p">(</span><span class="nv">$dir</span><span class="p">)));</span>
+</code></pre></div>
+
+<p>OK, finally we are getting somewhere. There was one last hitch, I had to also tell the <code>RecursiveDirectoryterator</code> to skip dot files. This is what I ended up with.</p>
+
+<div class="highlight"><pre><code class="php"><span class="cp">&lt;?php</span>
+<span class="k">class</span> <span class="nc">PHPFileIterator</span> <span class="k">extends</span> <span class="nx">RecursiveFilterIterator</span>
+<span class="p">{</span>
+    <span class="k">public</span> <span class="k">static</span> <span class="k">function</span> <span class="nf">factory</span><span class="p">(</span><span class="nv">$dir</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="nx">RecursiveIteratorIterator</span><span class="p">(</span>
+            <span class="k">new</span> <span class="nx">PHPFileIterator</span><span class="p">(</span>
+                <span class="k">new</span> <span class="nx">RecursiveDirectoryIterator</span><span class="p">(</span>
+                    <span class="nv">$dir</span><span class="p">,</span>
+                    <span class="nx">FilesystemIterator</span><span class="o">::</span><span class="na">CURRENT_AS_FILEINFO</span> <span class="o">|</span> <span class="nx">FilesystemIterator</span><span class="o">::</span><span class="na">SKIP_DOTS</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">accept</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="nv">$file</span> <span class="o">=</span> <span class="k">parent</span><span class="o">::</span><span class="na">current</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nv">$file</span><span class="o">-&gt;</span><span class="na">isDir</span><span class="p">())</span> <span class="k">return</span> <span class="k">true</span><span class="p">;</span>
+        <span class="nv">$name</span> <span class="o">=</span> <span class="nv">$file</span><span class="o">-&gt;</span><span class="na">getFilename</span><span class="p">();</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nx">substr</span><span class="p">(</span><span class="nv">$name</span><span class="p">,</span> <span class="o">-</span><span class="mi">4</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;.php&#39;</span> <span class="o">&amp;&amp;</span> <span class="nx">substr</span><span class="p">(</span><span class="nv">$name</span><span class="p">,</span> <span class="o">-</span><span class="mi">9</span><span class="p">)</span> <span class="o">!=</span> <span class="s1">&#39;.html.php&#39;</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="nv">$files</span> <span class="o">=</span> <span class="nx">PHPFileIterator</span><span class="o">::</span><span class="na">factory</span><span class="p">(</span><span class="nv">$dir</span><span class="p">);</span>
+</code></pre></div>
+
+<p>It&#39;s a shame that I need to use three objects to do this. And with the <code>FilesystemIterator</code> constants thrown in it&#39;s a lot of typing, thus the <code>factory</code> method. There are some other takeaways from this exercise.</p>
+
+<ul>
+<li>The <code>RecursiveFilterIterator</code> will let you skip and entire <em>branch</em> of a tree structure by returning false from <code>accept</code>. Imagine creating a URL matching router using this. I could be quite powerful.</li>
+<li>One of the downsides I ran into while running some tests is if you wanted to look for directories with a certain name or pattern you could not do it with <code>RecursiveFilterIterator</code>. You <strong>have to</strong> return true for a directory in <code>accept</code> otherwise the iterator won&#39;t recurse down the sub-directories.</li>
+<li>I also found it a bit weird that <code>FilesystemIterator</code> has <code>SKIP_DOTS</code> enabled by default but <code>RecursiveDirectoryIterator</code> does not. I guess these kinds of inconsistencies are to be expected though, it is PHP.</li>
+</ul>
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[New Beginnings]]></title>
     <link href="http://paulyg.github.io/blog/2014/01/25/new-beginnings.html"/>
     <updated>2014-01-25T00:00:00-05:00</updated>
     <id>http://paulyg.github.io/blog/2014/01/25/new-beginnings</id>
     <content type="html"><![CDATA[<p>I am taking a cue from respected PHP developer <a href="http://paul-m-jones.com/">Paul M. Jones</a>. Paul somewhat recently split his blog into two. One for personal stuff (he blogs about a lot of political stuff) and one for software development. In starting this blog I am doing something similar.</p>
 
-<p>I have not been very active on my personal blog for a while. And part of that is becuase I have been reluctant to make a bunch of technical posts there. My family  and some friends follow it and I think they would think it&#39;s weird that I am posting about all this PHP stuff when that is not my day job. But since I can&#39;t talk much about my day job (they are very much an old school, closed, engineering shop) and I have not been doing autocrossing or track days since becoming a homeowner and then dad, writing web apps is the most exiting thing going.</p>
+<p>I have not been very active on my personal blog for a while. And part of that is because I have been reluctant to make a bunch of technical posts there. My family  and some friends follow it and I think they would think it&#39;s weird that I am posting about all this PHP stuff when that is not my day job. But since I can&#39;t talk much about my day job (they are very much an old school, closed, engineering shop) and I have not been doing autocrossing or track days since becoming a homeowner and then dad, writing web apps is the most exiting thing going.</p>
 
-<p>The other factor is I have been iching to convert my WordPress blog to <a href="http://jekyllrb.com">Jekyll</a>/<a href="http://octopress.org/">Octopress</a>. Through the generousty of Github I have a free space to host this blog and can play around with Jekyll and Octopress. I think my personal blog being on WordPress hurt my willingness to write as well. The software just felt so <em>heavy</em>. I should have made more use of the Android app though. Oh well.</p>
+<p>The other factor is I have been itching to convert my WordPress blog to <a href="http://jekyllrb.com">Jekyll</a>/<a href="http://octopress.org/">Octopress</a>. Through the generosity of Github I have a free space to host this blog and can play around with Jekyll and Octopress. I think my personal blog being on WordPress hurt my willingness to write as well. The software just felt so <em>heavy</em>. I should have made more use of the Android app though. Oh well.</p>
 
-<p>I amd looking forward to putting out some great content, mostly on PHP but also some CSS and Linux stuff.</p>
+<p>I am looking forward to putting out some great content, mostly on PHP but also some CSS and Linux stuff.</p>
 
 <p>Till next time...</p>
 
