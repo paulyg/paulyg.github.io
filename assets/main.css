@@ -587,6 +587,7 @@ article .entry-meta {
   text-align: right;
   width: auto;
 }
+article .entry-meta .author,
 article .entry-meta .date,
 article .entry-meta .tags,
 article .entry-meta .comments {
@@ -693,6 +694,10 @@ article .entry-meta .comments {
 .share a {
   width: 120px;
   color: #fff;
+  margin-right: 20px;
+}
+.share a:last-child {
+  margin-right: 0;
 }
 .share .btn-fb-share {
   background-color: #3B5998;
