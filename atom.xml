@@ -4,7 +4,7 @@
   <title><![CDATA[Paul Garvin's Dev Blog]]></title>
   <link href="http://paulyg.github.io/atom.xml" rel="self"/>
   <link href="http://paulyg.github.io"/>
-  <updated>2014-02-12T23:40:59-05:00</updated>
+  <updated>2014-03-01T14:38:27-05:00</updated>
   <id>http://paulyg.github.io</id>
   <author>
     <name><![CDATA[Paul Garvin]]></name>
@@ -12,6 +12,88 @@
   </author>
   <generator uri="http://jekyllrb.org/">Jekyll</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[On PHP Routing Libraries]]></title>
+    <link href="http://paulyg.github.io/blog/2014/03/01/on-php-routing-libraries.html"/>
+    <updated>2014-03-01T00:00:00-05:00</updated>
+    <id>http://paulyg.github.io/blog/2014/03/01/on-php-routing-libraries</id>
+    <content type="html"><![CDATA[<p>I have been interested in different URL routing techniques in web frameworks for a few years now. I have looked at the code for <a href="http://symfony.com/">Symfony 2</a>, <a href="http://auraphp.com/">Aura</a>, and <a href="http://slimframework.com/">Slim&#39;s</a> routing. They, at a simplified level, work the same way. I suspect most routing libraries written in the PHP 5.3+ era work similarly and there has not been any new developments for a few years... until now. A few interesting libraries have burst onto the scene in the past month or two that do things differently. One in particular causing some discussion and debate in the community. I want to talk about what makes them different, advantages and disadvantages, and what I want out of a PHP routing library that has yet to be fulfilled.</p>
+
+<h2>The Status Quo</h2>
+
+<p>At their root routing libraries map a URL pattern (usually the rewritten path portion) to a piece of code to be executed. A secondary purpose is to extract key =&gt; value parameters from the URL path. A typical routing library lets you define routes like so.</p>
+
+<div class="highlight"><pre><code class="php"><span class="cp">&lt;?php</span>
+<span class="nv">$router</span><span class="o">-&gt;</span><span class="na">addRoute</span><span class="p">(</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;/post/{id}/comments&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;controller&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;PostController&#39;</span><span class="p">,</span> <span class="s1">&#39;action&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;show&#39;</span><span class="p">]);</span>
+</code></pre></div>
+
+<p>That last argument might be an anonymous function or some other PHP <code>callable</code>. And maybe instead of calling <code>addRoute()</code> with <code>GET</code> you call a <code>get()</code> method. Those are small implementation details. Under the hood most routing libraries take those arguments and make a <code>Route</code> object out of them and store a collection of these <code>Route</code> objects. When routing is <em>run</em> the collection is looped over and for each <code>Route</code> a regex is used to extract the parameter names from the pattern, in our example the <code>id</code>, and turn that pattern into a real regex pattern. The generated regex is then used to test if the <code>Route</code> matches the requested URL/path/whatever. And if it does match this generated regex pulls the parameter values out of the requested URL.</p>
+
+<h2>Bullet</h2>
+
+<p><a href="https://github.com/vlucas/bulletphp">Bullet PHP</a> bills itself as a <em>resource-oriented micro PHP framework</em>. The novel thing it does for routing is to break the requested path into segments, one for each <em>directory</em> in the path. The routing engine will try matching the first <em>directory</em> segment. If there is a callable registered for that segment the callable will be run. The engine will continue searching for matched routes and running any registered callables until all the segments are exhausted.</p>
+
+<p>OK I think an example is in order. This is shamelessly stolen from the Bullet PHP README. Suppose the requested path is <code>/events/45/edit</code>. The routing engine will first look for matches for just <code>/events</code>. Any registered callbacks will be executed. Then the routing engine will look for matches for <code>/events/45</code>, again any registered callbacks will be executed. Finally <code>/events/45/edit</code> will be used to search for matches.</p>
+
+<p>The examples in the documentation show that in the <code>/events</code> callable you could register the routes for <code>/events/{id}</code> and <code>/events/{id}/edit</code>.</p>
+
+<div class="highlight"><pre><code class="php"><span class="cp">&lt;?php</span>
+<span class="nv">$app</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Bullet\App</span><span class="p">(</span><span class="k">array</span><span class="p">(</span><span class="cm">/* some config here */</span><span class="p">));</span>
+
+<span class="nv">$app</span><span class="o">-&gt;</span><span class="na">path</span><span class="p">(</span><span class="s1">&#39;events&#39;</span><span class="p">,</span> <span class="k">function</span><span class="p">(</span><span class="nv">$request</span><span class="p">)</span> <span class="k">use</span> <span class="p">(</span><span class="nv">$app</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="nv">$app</span><span class="o">-&gt;</span><span class="na">get</span><span class="p">(</span><span class="k">function</span><span class="p">(</span><span class="nv">$request</span><span class="p">)</span> <span class="k">use</span> <span class="p">(</span><span class="nv">$app</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// list events</span>
+    <span class="p">});</span>
+    <span class="nv">$app</span><span class="o">-&gt;</span><span class="na">post</span><span class="p">(</span><span class="k">function</span><span class="p">(</span><span class="nv">$request</span><span class="p">)</span> <span class="k">use</span> <span class="p">(</span><span class="nv">$app</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// create an event</span>
+    <span class="p">});</span>
+    <span class="nv">$app</span><span class="o">-&gt;</span><span class="na">path</span><span class="p">(</span><span class="s1">&#39;new&#39;</span><span class="p">,</span> <span class="k">function</span><span class="p">(</span><span class="nv">$request</span><span class="p">)</span> <span class="k">use</span> <span class="p">(</span><span class="nv">$app</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// new event form</span>
+    <span class="p">});</span>
+
+    <span class="nv">$app</span><span class="o">-&gt;</span><span class="na">param</span><span class="p">(</span><span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="k">function</span><span class="p">(</span><span class="nv">$request</span><span class="p">,</span> <span class="nv">$id</span><span class="p">)</span> <span class="k">use</span> <span class="p">(</span><span class="nv">$app</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nv">$app</span><span class="o">-&gt;</span><span class="na">get</span><span class="p">(</span><span class="k">function</span><span class="p">(</span><span class="nv">$request</span><span class="p">)</span> <span class="k">use</span> <span class="p">(</span><span class="nv">$id</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// View an event</span>
+        <span class="p">});</span>
+        <span class="nv">$app</span><span class="o">-&gt;</span><span class="na">put</span><span class="p">(</span><span class="k">function</span><span class="p">(</span><span class="nv">$request</span><span class="p">)</span> <span class="k">use</span> <span class="p">(</span><span class="nv">$id</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// Update event</span>
+        <span class="p">});</span>
+        <span class="nv">$app</span><span class="o">-&gt;</span><span class="na">delete</span><span class="p">(</span><span class="k">function</span><span class="p">(</span><span class="nv">$request</span><span class="p">)</span> <span class="k">use</span> <span class="p">(</span><span class="nv">$id</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// Delete event</span>
+        <span class="p">});</span>
+        <span class="nv">$app</span><span class="o">-&gt;</span><span class="na">path</span><span class="p">(</span><span class="s1">&#39;edit&#39;</span><span class="p">,</span> <span class="k">function</span><span class="p">(</span><span class="nv">$request</span><span class="p">)</span> <span class="k">use</span> <span class="p">(</span><span class="nv">$id</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// edit event form</span>
+        <span class="p">});</span>
+    <span class="p">});</span>
+<span class="p">});</span>
+</code></pre></div>
+
+<p>This is a form of creating a tree structure with your routes. A true tree structure is something I feel is missing from most PHP web frameworks. Tree structures can considerably speed up route matching since you can skip over dozens of routes with one check. For example you could skip over all of the <code>/admin</code> routes for your application in one route match check. More routing libraries should try to implement a tree structure rather than just a flat list of routes to loop over.</p>
+
+<p>The downsides of Bullet PHP are that it expects the callable to be a Closure. No other types are excepted. In the authors defense he does state that the Closure is not the actual controller, but you call the actual controller from the Closure. That leads to my other complaint though. Although I like the tree structure and it promotes creating <em>RESTful, resource oriented</em> routes, doing to requires a lot of boiler plate code. I don&#39;t want to have to retype having <code>/events/{id}</code> GET, <code>/events/{id}</code> POST, etc for every resource. Nor do I want to have to re-implement the code for instantiating a controller object and calling the action method on each project. I&#39;d like to see more PHP routing libraries with a <code>resources()</code> method that does something similar to the name method in Ruby on Rails. Aura Routing 2.0 added an <a href="https://github.com/auraphp/Aura.Router#attaching-rest-resource-routes">attachResource()</a> method but that is the only one I&#39;m aware of. I have added my own implementation on top of Slim.</p>
+
+<h2>Pux</h2>
+
+<p><a href="https://github.com/c9s/Pux">Pux</a> is the more controversial of the two libraries presented in this post. Pux makes <em>big</em> claims in performance: 48X as fast as Symfony in static routes and 31X with dynamic routes. It achieves this in three ways.
+1. It stores the routes as <code>arrays</code> vs Route objects. I don&#39;t know how much this actually saves these days since there has been a lot of optimizations in the PHP engine surrounding objects and memory performance.
+2. It <em>pre-compiles</em> the regex patterns. In my example of the common implementation, this step of changing the URL pattern to a regex pattern happens on every request. Good libraries will lazily do this step, converting each one until a match is found and then stopping. Bad libraries do this step on all routes regardless. The pre-compiled route arrays are stored on disk, or in memory. This is the part that really interests me.
+3. It uses a C extension. This part doesn&#39;t interest me at. Of course something written in C is faster than in PHP where it doesn&#39;t have the overhead of a virtual machine or hash table lookups for every variable or array offset. The C extension is not as useful to most of us becuase we can&#39;t use it on shared hosts or most Software-as-a-Service providers. The only way to use it is to host your own PHP on a VPS.</p>
+
+<p>The fact that Pux is faster due to the C extension is no surprise to anyone. It&#39;s the pre-compiling of the regex patterns that is novel to me, and seems to be glazed over in a lot of the discussion about Pux. One of the reasons I like pre-compiling the regex patterns is that pre-processing of web application code is getting more common place. Sure you don&#39;t see it in PHP, but on the client side concatenating and minifying Javascript, compiling LESS or SCSS to CSS are basically a necessity now. Libraries could compile the regexes on the fly like the do now during development. Prior to release you run a CLI script as part of your release process and the compiled regexes along with other routing information are saved to file that is then read in on each request instead of the more verbose routing information.</p>
+
+<p>I can imagine other uses for this type of pre-release preprocessing. A big one is for describing relational database tables, columns and relationships for an Active Record or Data Mapper library.</p>
+
+<p>I should also point out an <a href="http://nikic.github.io/2014/02/18/Fast-request-routing-using-regular-expressions.html">excellent blog post</a> by Nikita Popov, a regular PHP core contributor about how to speed up regular expression matching in routing engines. The gist of it is that by combining individual regex patterns together you can approach or beat Pux&#39;s performance. You need to do some special processing to do this and there is at least one caveat to it but it is a very intersting approach to the problem.</p>
+
+<h2>My Perfect Routing Library</h2>
+
+<p>I have had several starts in the past at writing a routing library with some of these features in mind. What I have concentrated on is having a tree structure for the routing and how to best create <code>RESTful</code> route groups. I&#39;ve started down the road of having <code>Collection</code> objects and <code>Route</code> objects using simple recursion to iterate over them all (or skip branches). I have thought about doing this so you could iterate using one of SPL&#39;s builtin recursive iterators, but have not had time to flush anything out. I&#39;ve done it where the <code>RESTful</code> route group is just extending the <code>Collection</code> with <code>Route</code> objects for each URL-method combination. And I&#39;ve done it where the <code>RESTful</code> groups is a specialized <code>Route</code> object that uses one regex to match all the URLs. My perfect library has to have at least those two, tree structures and easy way to create resource groups.</p>
+
+<p>And as I said I am intrigued by the idea of pre-compiling the regex patterns, especially in production where it does not make sense to repeat this task over and over again for each request. So if I ever got the time to create my perfect routing library it would have that in it too. One last point to tink about is we have not seen anyone take advantage of generators on PHP 5.5 for a routing library. I have not thought of a way in which generators could do something novel for routing libraries yet, but there are much more creative people than me out there.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Using PHP's RecursiveFilterIterator]]></title>
