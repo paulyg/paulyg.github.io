@@ -4,7 +4,7 @@
   <title><![CDATA[Paul Garvin's Dev Blog]]></title>
   <link href="http://paulyg.github.io/atom.xml" rel="self"/>
   <link href="http://paulyg.github.io"/>
-  <updated>2014-03-01T14:38:27-05:00</updated>
+  <updated>2014-06-02T23:28:34-04:00</updated>
   <id>http://paulyg.github.io</id>
   <author>
     <name><![CDATA[Paul Garvin]]></name>
@@ -12,6 +12,53 @@
   </author>
   <generator uri="http://jekyllrb.org/">Jekyll</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[DirectoryIterator vs FilesystemIterator]]></title>
+    <link href="http://paulyg.github.io/blog/2014/06/03/directoryiterator-vs-filesystemiterator.html"/>
+    <updated>2014-06-03T00:00:00-04:00</updated>
+    <id>http://paulyg.github.io/blog/2014/06/03/directoryiterator-vs-filesystemiterator</id>
+    <content type="html"><![CDATA[<p>I was working on a project that required iterating over a directory of files recently. Whenever I do this I reach for my old friend <code>RecursiveDirectoryIterator</code>. In this case I only needed the full path to each file. I was using the fact that <code>RecursiveDirectoryIterator</code> returns the full path as the key on each iteration step by default. I was ignoring the value, which is an <code>SplFileInfo</code> object. Looking through the documentation I saw there was a way to make <code>RecursiveDirectoryIterator</code> return just the full path as the value. However I ran into a bug that caused me to dig into the internals of the SPL and figure out how things were working.</p>
+
+<p>Besides <code>RecursiveDirectoryIterator</code> there are two other main SPL classes for iterating over files in a directory: <code>DirectoryIterator</code>, and <code>FilesystemIterator</code>. When SPL was first introduced in PHP 5.0 <code>FilesystemIterator</code> did not exist. It was added in PHP 5.3. I never understood what the difference between it and <code>DirectoryIterator</code> was until now. The documentation does not give many clues. How this relates to <code>RecursiveDirectoryIterator</code> is that class used to extend from <code>DirectoryIterator</code>. When <code>FilesystemIterator</code> was introduced it was changed to extend from that class instead. The reasons for this will be clear later. So what are the differences between <code>DirectoryIterator</code> and <code>FilesystemIterator</code>? Here is what I found out.</p>
+
+<h2>DirectoryIterator</h2>
+
+<p>When you iterate using <code>DirectoryIterator</code> each <em>value</em> returned is that same <code>DirectoryIterator</code> object. The internal state is changed so that when you call <code>isDir()</code>, <code>getPathname()</code>, or similar methods the correct information is returned. If you were to ask for a key when iterating you will get an integer index value.</p>
+
+<div class="highlight"><pre><code class="php"><span class="cp">&lt;?php</span>
+<span class="nv">$files</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">DirectoryIterator</span><span class="p">(</span><span class="cm">/*...*/</span><span class="p">);</span>
+<span class="k">foreach</span> <span class="p">(</span><span class="nv">$files</span> <span class="k">as</span> <span class="nv">$index</span> <span class="o">=&gt;</span> <span class="nv">$iterator</span><span class="p">)</span> <span class="p">{</span>
+    <span class="cm">/*...*/</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2>FilesystemIterator</h2>
+
+<p><code>FilesystemIterator</code> (and thus <code>RecursiveDirectoryIterator</code>) on the other hand returns a new, different <code>SplFileInfo</code> object for each iteration step. The key is the full pathname of the file. </p>
+
+<div class="highlight"><pre><code class="php"><span class="cp">&lt;?php</span>
+<span class="nv">$files</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">FilesystemIterator</span><span class="p">(</span><span class="cm">/*...*/</span><span class="p">);</span>
+<span class="k">foreach</span> <span class="p">(</span><span class="nv">$files</span> <span class="k">as</span> <span class="nv">$fullPath</span> <span class="o">=&gt;</span> <span class="nv">$info</span><span class="p">)</span> <span class="p">{</span>
+    <span class="cm">/*...*/</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>This is by default. You can change what is returned for the key or value using the <em>flags</em> argument to the constructor. Your choices are:</p>
+
+<ul>
+<li><code>CURRENT_AS_PATHNAME</code></li>
+<li><code>CURRENT_AS_FILEINFO</code></li>
+<li><code>CURRENT_AS_SELF</code> Note that this makes <code>FilesystemIterator</code> and <code>RecursiveDirectoryIterator</code> behave like <code>DirectoryIterator</code></li>
+<li><code>KEY_AS_PATHNAME</code></li>
+<li><code>KEY_AS_FILENAME</code></li>
+</ul>
+
+<p>The bug I ran into has to do with the <code>CURRENT_AS_PATHNAME</code> option. Using it will cause PHP to throw a fatal exception. I made a pull request to fix this and submitted it via Github but as of the date of this blog post has yet to be merged.</p>
+
+<p>I&#39;m not sure about all of the histroy, why <code>DirectoryIterator</code> returned itself but <code>RecursiveDirectoryIterator</code> returned new <code>SplFileInfo</code> objects when SPL was created, but it is clear the <code>FilesystemIterator</code> class was introduced to make the API a little bit cleaner.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[On PHP Routing Libraries]]></title>
@@ -97,9 +144,9 @@
   
   <entry>
     <title type="html"><![CDATA[Using PHP's RecursiveFilterIterator]]></title>
-    <link href="http://paulyg.github.io/blog/2014/02/01/using-phps-recursivefilteriterator.html"/>
-    <updated>2014-02-01T04:45:39Z</updated>
-    <id>http://paulyg.github.io/blog/2014/02/01/using-phps-recursivefilteriterator</id>
+    <link href="http://paulyg.github.io/blog/2014/01/31/using-phps-recursivefilteriterator.html"/>
+    <updated>2014-01-31T23:45:39-05:00</updated>
+    <id>http://paulyg.github.io/blog/2014/01/31/using-phps-recursivefilteriterator</id>
     <content type="html"><![CDATA[<p>I was recently working on a project where I needed to recursively get all of the files with a particular extension inside a directory. Actually I needed to find all files with a <code>.php</code> extension but not <code>.html.php</code>. Sounds like a perfect use for <code>RecursiveDirectoryIterator</code> right? I could do something like the following.</p>
 
 <div class="highlight"><pre><code class="php"><span class="cp">&lt;?php</span>

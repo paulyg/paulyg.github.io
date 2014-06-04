@@ -1,0 +1,216 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" conent="IE=edge">
+  <title>DirectoryIterator vs FilesystemIterator - Paul Garvin's Dev Blog</title>
+  
+  
+  <meta name="author" content="Paul Garvin">
+  <meta name="description" content="I was working on a project that required iterating over a directory of files recently. Whenever I do this I reach for my old friend RecursiveDirectoryIterator. In this case I only needed the full path to each file. I was using the fact that RecursiveDirectoryIterator returns the full path as the key on each iteration step by default. I was ignoring the value, which is an SplFileInfo object. Looking through the documentation I saw there was a way to make RecursiveDirectoryIterator return just the full path as the value. However I ran into a bug that caused me to dig into the internals of the SPL and figure out how things were working.">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="og:type" content="website">
+  <meta name="og:locale" content="en_US">
+  <meta name="og:title" content="DirectoryIterator vs FilesystemIterator">
+  <meta name="og:site_name" content="Paul Garvin's Dev Blog">
+  <meta name="og:url" content="http://paulyg.github.io/blog/2014/06/03/directoryiterator-vs-filesystemiterator.html">
+  <meta name="og:description" content="I was working on a project that required iterating over a directory of files recently. Whenever I do this I reach for my old friend RecursiveDirectoryIterator. In this case I only needed the full path to each file. I was using the fact that RecursiveDirectoryIterator returns the full path as the key on each iteration step by default. I was ignoring the value, which is an SplFileInfo object. Looking through the documentation I saw there was a way to make RecursiveDirectoryIterator return just the full path as the value. However I ran into a bug that caused me to dig into the internals of the SPL and figure out how things were working.">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:creator" content="paulyg76">
+  <meta name="twitter:title" content="DirectoryIterator vs FilesystemIterator">
+  <meta name="twitter:description" content="I was working on a project that required iterating over a directory of files recently. Whenever I do this I reach for my old friend RecursiveDirectoryIterator. In this case I only needed the full path to each file. I was using the fact that RecursiveDirectoryIterator returns the full path as the key on each iteration step by default. I was ignoring the value, which is an SplFileInfo object. Looking through the documentation I saw there was a way to make RecursiveDirectoryIterator return just the full path as the value. However I ran into a bug that caused me to dig into the internals of the SPL and figure out how things were working.">
+  <link href="/atom.xml" rel="alternate" title="Paul Garvin's Dev Blog" type="application/atom+xml">
+  <link rel="canonical" href="http://paulyg.github.io/blog/2014/06/03/directoryiterator-vs-filesystemiterator.html">
+  <link href="/favicon.png" rel="shortcut icon">
+  <link href="/assets/main.css" rel="stylesheet">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <link href='http://fonts.googleapis.com/css?family=Open+Sans:400italic,400,700' rel='stylesheet' type='text/css'>
+  <link href='http://fonts.googleapis.com/css?family=Source+Code+Pro:400,700' rel='stylesheet' type='text/css'>
+<link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+</head>
+
+
+<body >
+  <div class="side-col">
+    <header id="site-header"><div class="profilepic">
+  
+  <img src="http://www.gravatar.com/avatar/e263158de5392a0a63fd12b2a90c29ff?s=120" alt="Profile Picture" class="img-circle" style="width: 120px;" />
+  
+</div>
+<h1 id="site-title"><a href="/">Paul Garvin's Dev Blog</a></h1>
+
+<div class="aboutme">
+  <p>
+    I am a mechanical engineer by day, an aspiring web developer by night, a husband, and a dad. Besides the web, Linux, and open source software I enjoy following sports car and open wheel racing, participating in track days and autocrossing. Follow on my journey as a delve into the world of HTML, CSS, JavaScript, PHP, Ruby and Python. There will be Linux and GNOME stuff here too.
+  </p>
+</div>
+
+<nav id="main-nav"><ul class="unstyled">
+  <li><a href="/blog/archives/">Archives</a></li>
+  <li><a href="/projects.html">Projects</a></li>
+</ul>
+</nav>
+<nav id="sub-nav">
+  <div class="social">
+    
+    
+    
+    
+      <a class="twitter" href="http://twitter.com/paulyg76" title="Twitter">Twitter</a>
+    
+    
+      <a class="github" href="https://github.com/paulyg" title="GitHub">GitHub</a>
+    
+    
+    
+    
+    
+    
+    
+    
+      <a class="rss" href="/atom.xml" title="RSS">RSS</a>
+    
+  </div>
+</nav>
+</header>
+  </div>
+  <div class="main-col">
+    <div id="content"><article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <h1 class="entry-title p-name" itemprop="name">DirectoryIterator vs FilesystemIterator</h1>
+<div class="entry-meta">
+  <div>
+    <div class="author"><i class="fa fa-user"></i> By <span class="p-author" itemprop="author">
+  
+
+Paul Garvin
+</div>
+    <div class="date"><i class="fa fa-calendar"></i> 
+
+
+
+
+
+
+
+
+  
+
+
+
+<time class="dt-published" datetime="2014-06-03T00:00:00-04:00" data-updated="true" itemprop="datePublished">Jun 3<span>rd</span>, 2014</time> </div>
+  </div>
+  <div>
+    
+      <div class="tags p-category" itemprop="keywords"><i class="fa fa-tag"></i> 
+
+
+    <a class='category' href='/blog/categories/php/'>php</a>, spl, iterator
+
+</div>
+    
+    
+      <div class="comments"><i class="fa fa-comment"></i> <a href="#disqus_thread">Comments</a></div>
+    
+  </div>
+  <div class="readtime">2 minute read</div>
+</div>
+<div class="entry-content e-content" itemprop="articleBody"><p>I was working on a project that required iterating over a directory of files recently. Whenever I do this I reach for my old friend <code>RecursiveDirectoryIterator</code>. In this case I only needed the full path to each file. I was using the fact that <code>RecursiveDirectoryIterator</code> returns the full path as the key on each iteration step by default. I was ignoring the value, which is an <code>SplFileInfo</code> object. Looking through the documentation I saw there was a way to make <code>RecursiveDirectoryIterator</code> return just the full path as the value. However I ran into a bug that caused me to dig into the internals of the SPL and figure out how things were working.</p>
+
+<p>Besides <code>RecursiveDirectoryIterator</code> there are two other main SPL classes for iterating over files in a directory: <code>DirectoryIterator</code>, and <code>FilesystemIterator</code>. When SPL was first introduced in PHP 5.0 <code>FilesystemIterator</code> did not exist. It was added in PHP 5.3. I never understood what the difference between it and <code>DirectoryIterator</code> was until now. The documentation does not give many clues. How this relates to <code>RecursiveDirectoryIterator</code> is that class used to extend from <code>DirectoryIterator</code>. When <code>FilesystemIterator</code> was introduced it was changed to extend from that class instead. The reasons for this will be clear later. So what are the differences between <code>DirectoryIterator</code> and <code>FilesystemIterator</code>? Here is what I found out.</p>
+
+<h2>DirectoryIterator</h2>
+
+<p>When you iterate using <code>DirectoryIterator</code> each <em>value</em> returned is that same <code>DirectoryIterator</code> object. The internal state is changed so that when you call <code>isDir()</code>, <code>getPathname()</code>, or similar methods the correct information is returned. If you were to ask for a key when iterating you will get an integer index value.</p>
+
+<div class="highlight"><pre><code class="php"><span class="cp">&lt;?php</span>
+<span class="nv">$files</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">DirectoryIterator</span><span class="p">(</span><span class="cm">/*...*/</span><span class="p">);</span>
+<span class="k">foreach</span> <span class="p">(</span><span class="nv">$files</span> <span class="k">as</span> <span class="nv">$index</span> <span class="o">=&gt;</span> <span class="nv">$iterator</span><span class="p">)</span> <span class="p">{</span>
+    <span class="cm">/*...*/</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2>FilesystemIterator</h2>
+
+<p><code>FilesystemIterator</code> (and thus <code>RecursiveDirectoryIterator</code>) on the other hand returns a new, different <code>SplFileInfo</code> object for each iteration step. The key is the full pathname of the file. </p>
+
+<div class="highlight"><pre><code class="php"><span class="cp">&lt;?php</span>
+<span class="nv">$files</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">FilesystemIterator</span><span class="p">(</span><span class="cm">/*...*/</span><span class="p">);</span>
+<span class="k">foreach</span> <span class="p">(</span><span class="nv">$files</span> <span class="k">as</span> <span class="nv">$fullPath</span> <span class="o">=&gt;</span> <span class="nv">$info</span><span class="p">)</span> <span class="p">{</span>
+    <span class="cm">/*...*/</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>This is by default. You can change what is returned for the key or value using the <em>flags</em> argument to the constructor. Your choices are:</p>
+
+<ul>
+<li><code>CURRENT_AS_PATHNAME</code></li>
+<li><code>CURRENT_AS_FILEINFO</code></li>
+<li><code>CURRENT_AS_SELF</code> Note that this makes <code>FilesystemIterator</code> and <code>RecursiveDirectoryIterator</code> behave like <code>DirectoryIterator</code></li>
+<li><code>KEY_AS_PATHNAME</code></li>
+<li><code>KEY_AS_FILENAME</code></li>
+</ul>
+
+<p>The bug I ran into has to do with the <code>CURRENT_AS_PATHNAME</code> option. Using it will cause PHP to throw a fatal exception. I made a pull request to fix this and submitted it via Github but as of the date of this blog post has yet to be merged.</p>
+
+<p>I&#39;m not sure about all of the histroy, why <code>DirectoryIterator</code> returned itself but <code>RecursiveDirectoryIterator</code> returned new <code>SplFileInfo</code> objects when SPL was created, but it is clear the <code>FilesystemIterator</code> class was introduced to make the API a little bit cleaner.</p>
+</div>
+
+</article>
+<div class="sharing">
+  
+    <div class="share">
+  
+	<a class="btn btn-fb-share" href="https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Fpaulyg.github.io%2Fblog%2F2014%2F06%2F03%2Fdirectoryiterator-vs-filesystemiterator.html" onclick="javascript:window.open(this.href, '', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=400,width=600');return false;" title="Share on Facebook"><i class="fa fa-facebook"></i> Share</a>
+	<a class="btn btn-tweet" href="https://twitter.com/intent/tweet?url=http%3A%2F%2Fpaulyg.github.io%2Fblog%2F2014%2F06%2F03%2Fdirectoryiterator-vs-filesystemiterator.html" onclick="javascript:window.open(this.href, '', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=420,width=550');return false;" title="Share on Twitter"><i class="fa fa-twitter"></i> Tweet</a>
+	<a class="btn btn-plusone" href="https://plus.google.com/share?url=http%3A%2F%2Fpaulyg.github.io%2Fblog%2F2014%2F06%2F03%2Fdirectoryiterator-vs-filesystemiterator.html" onclick="javascript:window.open(this.href, '', 'menubar=no,toolbar=no,resizable=yes,scrollbars=yes,height=600,width=600');return false;" title="Share on Google+"><i class="fa fa-google-plus"></i> +1</a>
+</div>
+
+  
+</div>
+
+  <div class="comments">
+    <h1 class="title">Comments</h1>
+    <div id="disqus_thread" aria-live="polite">
+      <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
+  </div>
+
+</div>
+    <footer id="site-footer"><p>Powered by <a href="http://octopress.org/" target="_blank">Octopress</a> | Design credit: <a href="http://shashankmehta.in/archive/2012/greyshade.html">Shashank Mehta</a></p>
+<p>Copyright 2013 Paul Garvin</p>
+<p><a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/deed.en_US"><img alt="Creative Commons License" style="border-width:0" src="http://i.creativecommons.org/l/by-nc/4.0/80x15.png" /></a> Content on <span xmlns:dct="http://purl.org/dc/terms/" href="http://purl.org/dc/dcmitype/Text" property="dct:title" rel="dct:type">Paul Garvin's Dev Blog</span> is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/deed.en_US">Creative Commons Attribution-NonCommercial 4.0 International License</a>.</p>
+</footer>
+  </div>
+  
+<script type="text/javascript">
+      var disqus_shortname = 'paulyggithubblog';
+      
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://paulyg.github.io/blog/2014/06/03/directoryiterator-vs-filesystemiterator.html';
+        var disqus_url = 'http://paulyg.github.io/blog/2014/06/03/directoryiterator-vs-filesystemiterator.html';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-47365613-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+
+</body>
+</html>
